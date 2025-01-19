@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<title>Proof of Concept Latt&eacute; Factor Calculator</title>
+		<script src="lattefactor.js"></script>
+		<link rel="Stylesheet" type="text/css" href="lattefactor.css" />
+	</head>
+	<body>
+		<header><h1>Proof of Concept Latt&eacute; Factor Calculator</h1></header>
+		<main>
+		<div id="cont">
+			<div id="warningHolder">
+				<p><strong>WARNING:</strong> This is a proof-of-concept calculator to determine how much that expense is really costing you.</p>
+				<p>
+			</div>
+
+			<div id="formHolder">
+				<h2>Details</h2>
+				<div class="fieldHolder">
+					<label for="paymentAmnt">Cost </label>
+					<span id="dollars">$</span> <input id="paymentAmnt" name="paymentAmnt" aria-describedby="dollars">
+				</div>
+				<div class="fieldHolder">
+					<fieldset>
+						<legend>Per</legend>
+						<div>
+							<label><input type="radio" id="day" name="payrate"> Every Day</label>
+						</div>
+						<div>
+							<label><input type="radio" id="businessday" name="payrate" checked> Every Business Day</label>
+						</div>
+						<div>
+							<label><input type="radio" id="week" name="payrate"> Week</label>
+						</div>
+						<div>
+							<label><input type="radio" id="fortnight" name="payrate"> Fortnight</label>
+						</div>
+						<div>
+							<label><input type="radio" id="month" name="payrate"> Month</label>
+						</div>
+					</fieldset>
+				</div>
+				<div class="fieldHolder">
+					<label for="inflationRate">Inflation rate</label><span id="inflationRateEx"> (ex: 2.00)</label>
+					<input id="inflationRate" name="inflationRate" type="number" min="0" max="100" step="0.01" value="2.00" size="5" aria-describedby="inflationRateEx inflationDesc"> %
+					<p id="inflationDesc">Assume your latt&eacute; gets more expensive every year with inflation.</p>
+				</div>
+				<div class="fieldHolder">
+					<label for="startDate">Start Date</label>
+					<input type="date" id="startDate" name="startDate">
+				</div>
+				<div class="fieldHolder">
+					<label for="endDate">End Date</label>
+					<input type="date" id="endDate" name="endDate">
+				</div>
+				<div class="fieldHolder">
+					<label for="etfPrice">Initial cost of of ETF</label>
+					<span id="dollars1">$</span> <input id="etfPrice" name="etfPrice" aria-describedby="dollars1">
+				</div>
+				<div class="fieldHolder">
+					<label for="growthRate">Annual growth rate</label><span id="growthRateEx"> (ex: 7.00)</label>
+					<input id="growthRate" name="growthRate" type="number" min="0" max="100" step="0.01" value="7.00" size="5" aria-describedby="growthRateEx"> %
+				</div>
+				<div class="fieldHolder">
+					<button id="calcBtn">Calculate</button>
+				</div>
+			</div>
+			<div id="resultsHolder">
+				<p><span id="youCanAfford">You can afford $<output id="resultsOutput" aria-describedby="youCanAfford"></output>.</p>
+			</div>
+			</div>
+		</main>
+		<footer>
+		<p>Co-hosted at <a href="https://www.nordburg.ca/calculators/lattefactor/lattefactor.html">nordburg.ca</a> and <a href="https://andrewnordlund.github.io/lattefactor/lattefactor.html">GitHub Pages</a>.  Contribute to <a href="https://github.com/andrewnordlund/lattefactor">the GitHub repo</a> if you so desire.</p>
+		</footer>
+		<script type="text/Javascript">
+		init();
+		</script>
+	</body>
+</html>

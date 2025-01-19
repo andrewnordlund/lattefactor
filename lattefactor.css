@@ -1,0 +1,37 @@
+/*
+#formHolder, #resultsHolder {
+	width: 45%;
+	margin-left: 2em;
+float: left;
+}
+ */
+table {
+	border: thin solid black;
+}
+table td, table th {
+	border: thin inset #808080;
+}
+p {
+	margin-top: .5em;
+	margin-bottom: 1.3em;
+}
+fieldset {
+	display:inline;
+	padding: 0.5em 1.3em;
+	margin: 0.75em 0;
+}
+fieldset {
+	display:inline;
+	padding: 0.3em 1.3em;
+	margin: 0.75em 0;
+}
+fieldset label {
+	display: inline-block;
+	padding: 0.3em 0.3em;
+}
+footer {
+	margin-top: 1.3em;
+	padding-top: 0.75em;
+	border-top: #808080 thin solid;
+	font-size: 80%;
+}
