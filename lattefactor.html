@@ -13,7 +13,16 @@
 		<div id="cont">
 			<div id="warningHolder">
 				<p><strong>WARNING:</strong> This is a proof-of-concept calculator to determine how much that expense is really costing you.</p>
-				<p>
+				<p>There's debate in the personal finance arena over whether that daily latté is holding you back financially or not.  One side says "Take care of the dimes, and the dollars will take care of themselves."  The other side says "If you give up that daily latté for 10 years, you still won't save enough for a down payment on a house.  So, if that latté is what helps you get through the day, then enjoy it.  Where you should concentrate your efforts is on the major expenses of housing and transportation."</p>
+				<p>There are a number of calculators out there to do this. Most of the ones I've seen assume you'll put the money in an interest-bearning savings account.  This calculator assumes you'll purchase a growth ETF (no dividends) instead. This calculator assumes the following:</p>
+				<ul>
+					<li>You'll purchase a growth ETF (or mutual fund) that does not pay dividends.</li>
+					<li>The ETF will be purchased in your native currency, so exchange rates are irrelevant.</li>
+					<li>The ETF will go up steadily every non-weekend day. For example, if you assume the ETF will grow at 7%, it will calculate the daily increase at: (107 (future value) / 100 (present value)) ^ (1 /(365 - 104 (to remove weekends from the equation))).</li>
+					<li>The latté will increaes with inflation every year starting with one year after the Start Date you enter.</li>
+					<li>The Start Date will default to "tomorrow"; ie: enjoy your latté today.  Your "diet" starts tomorrow, you procrastinator.  Though, you can easily change this.  <span aria-hidden="true">:p</span><span class="invisibleStuff">emoji with tongue sticking out.</span></li>
+				</ul>
+				<p>Yes, I acknowledge that some of these are ridiculuous assumptions, like that an ETF will raise consistently over time.  [insert joke about making assumptions.]  But, we're looking into the future. There's no way to predict it.  The best we can do is use average numbers to attain ballpark figures.</p>
 			</div>
 
 			<div id="formHolder">
@@ -40,6 +49,9 @@
 						<div>
 							<label><input type="radio" id="month" name="payrate"> Month</label>
 						</div>
+						<div>
+							<label><input type="radio" id="year" name="payrate"> Year</label>
+						</div>
 					</fieldset>
 				</div>
 				<div class="fieldHolder">
@@ -63,12 +75,34 @@
 					<label for="growthRate">Annual growth rate</label><span id="growthRateEx"> (ex: 7.00)</label>
 					<input id="growthRate" name="growthRate" type="number" min="0" max="100" step="0.01" value="7.00" size="5" aria-describedby="growthRateEx"> %
 				</div>
+				<!--
+				<div class="fieldHolder">
+					<fieldset>
+						<legend></legend>
+						<div>
+							<label><input type="radio" id="day" name="payrate"> Every Day</label>
+						</div>
+						<div>
+							<label><input type="radio" id="businessday" name="payrate" checked> Every Business Day</label>
+						</div>
+						<div>
+							<label><input type="radio" id="week" name="payrate"> Week</label>
+						</div>
+						<div>
+							<label><input type="radio" id="fortnight" name="payrate"> Fortnight</label>
+						</div>
+						<div>
+							<label><input type="radio" id="month" name="payrate"> Month</label>
+						</div>
+					</fieldset>
+				</div>
+				-->
 				<div class="fieldHolder">
 					<button id="calcBtn">Calculate</button>
 				</div>
 			</div>
 			<div id="resultsHolder">
-				<p><span id="youCanAfford">You can afford $<output id="resultsOutput" aria-describedby="youCanAfford"></output>.</p>
+				<!-- <p><span id="youCanAfford">You can afford $<output id="resultsOutput" aria-describedby="youCanAfford"></output>.</p>-->
 			</div>
 			</div>
 		</main>

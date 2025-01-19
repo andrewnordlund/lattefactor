@@ -1,4 +1,5 @@
-var dbug = true;
+var dbug = !true;
+let version = "1.0.0";
 var fcs = {
 	"paymentAmnt" : null,
 	"inflationRate" : null,
@@ -11,9 +12,12 @@ var fcs = {
 	"businessday" : null,
 	"week" : null,
 	"month" : null,
+	"year" : null,
 	"etfPrice" : null,
-	"growthRate" : null
+	"growthRate" : null,
+	"resultsHolder" : null
 }
+const worksheet = {};	// I'm a COBOL programmer by day.  :p
 const today = new Date(); //.toISOString().substring(0,10);
 const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1);
 function init () {
@@ -24,13 +28,13 @@ function init () {
 			fcs[control] = document.getElementById(control);
 			//if (dbug) console.log ((fcs[control] ? "Got control " + control + "." : "Didn't get control " + control + "."));
 			if (control == "startDate") {
-				console.log ("Tomorrow is " + tomorrow + ".");
+				if (dbug) console.log ("Tomorrow is " + tomorrow + ".");
 				fcs[control].value = tomorrow.toISOString().substring(0,10);
 				//fcs[control].addEventListener("change", calculate, false);
 			} else if (control == "endDate") {
 				const lastday = new Date(tomorrow.getFullYear()+5, tomorrow.getMonth(), tomorrow.getDate());
 				
-				console.log ("Today is " + today + ".");
+				if (dbug) console.log ("Today is " + today + ".");
 				fcs[control].value = lastday.toISOString().substring(0,10);;
 			} else if (control == "calcBtn") {
 				fcs[control].addEventListener("click", calculate, false);
@@ -46,6 +50,10 @@ function init () {
 } // End of init
 
 function calculate () {
+	removeChildren(fcs["resultsHolder"]);
+
+	const resultsH2 = createHTMLElement("h2", {"parentNode" : fcs["resultsHolder"], "tabindex" : "-1", "textNode" : "Results", "id" : "resultsH2"});
+
 	// Gather Data
 	let cost = fcs["paymentAmnt"].value;
 	const inflationRate = fcs["inflationRate"].value/100;
@@ -60,7 +68,10 @@ function calculate () {
 	if (dbug) console.log ("Got payrate: " + paymentPeriod + ".");
 
 	let account = 0;
+	let totalSaved = 0;
 	let shares = 0;
+	let portfolio = 0;
+	let totalWorth = 0;
 
 	let dparts = startDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 	let current = new Date(dparts[1], dparts[2]-1, dparts[3]);
@@ -69,24 +80,73 @@ function calculate () {
 
 	let parts = endDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 	let future = new Date(parts[1], parts[2]-1, parts[3]);
-	console.log ("Starting with current: " + current.toISOString().substring(0,10) + ", and nextBuyDay is: " + nextBuyDay.toISOString().substring(0,10) + ", and will keep going until " + future.toISOString().substring(0,10) + ".");
+	let acb = {"acb" : 0, "shares" : []};
+	if (dbug) console.log ("Starting with current: " + current.toISOString().substring(0,10) + ", and nextBuyDay is: " + nextBuyDay.toISOString().substring(0,10) + ", and will keep going until " + future.toISOString().substring(0,10) + ".");
+	let years = {};
+	let totalETFCost = 0;
+
+	const tableHolder =createHTMLElement("div", {"parentNode" : fcs["resultsHolder"], "class": "tables-responsive"});
+
+	let resTable = createHTMLElement("table", {"parentNode" : tableHolder, "caption" : "Summary of results"});
+	let resTHead = createHTMLElement("thead", {"parentNode" : resTable});
+	let resTheadTR = createHTMLElement("tr", {"parentNode" : resTHead});
+
+	let yearTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textNode" : "Year"});
+	let costTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textContent" : "Cost of Latté ($)"});
+	let totalSavedTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textContent" : "Total Saved ($)"});
+	let etfPriceTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textNode" : "ETF Price per Share ($)"});
+	let accountTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textNode" : "Cash"});
+	let sharesTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textNode" : "Shares"});
+	let portfolioTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textNode" : "Portfolio Value ($)"});
+	let totalTH = createHTMLElement("th", {"parentNode" : resTheadTR, "scope" : "col", "textNode" : "Total ($)"});
+
+	let resTBody = createHTMLElement("tbody", {"parentNode" : resTable});
+	let resTBodyTR = createHTMLElement("tr", {"parentNode" : resTBody});
+	let yearTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : current.getFullYear()});
+	let costTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : getNum(cost)});
+	let totalSavedTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : getNum(totalSaved)});
+	let etfPriceTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : getNum(etfPrice)});
+	let accountTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : getNum(account)});
+	let sharesTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : shares});
+	let portfolioTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : getNum(portfolio)});
+	let totalTD = createHTMLElement("td", {"parentNode" : resTBodyTR, "textNode" : getNum(totalWorth)});
+
+
 	while (current < future) {
+		let tr = null;
 		if (current.toISOString().substring(0,10) == nextInflationDay.toISOString().substring(0,10)) {
-			console.log ("Since current is " + current.toISOString().substring(0,10) + ", and nextInflationDay is " + nextInflationDay.toISOString().substring(0,10) +", I'm inflating the price.");
+			if (dbug) console.log ("Since current is " + current.toISOString().substring(0,10) + ", and nextInflationDay is " + nextInflationDay.toISOString().substring(0,10) +", I'm inflating the price.");
 			cost = cost * (parseInt(1) + parseFloat(inflationRate));
 			nextInflationDay.setFullYear(parseInt(current.getFullYear()) + parseInt(1));
-			console.log ("Setting next inflation date to " + nextInflationDay.toISOString().substring(0,10) + ".");
+			if (dbug) console.log ("Setting next inflation date to " + nextInflationDay.toISOString().substring(0,10) + ".");
+			tr = createHTMLElement("tr", {"parentNode" : resTBody});
+			let yearTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : current.getFullYear()});
+			let costTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : getNum(cost)});
+			let totalSavedTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : getNum(totalSaved)});
+			let etfPriceTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : getNum(etfPrice)});
+			let accountTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : getNum(account)});
+			let sharesTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : shares});
+			portfolio = shares * etfPrice;
+			totalWorth = parseFloat(account) + parseFloat(portfolio);
+			let portfolioTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : getNum(portfolio)});
+			let totalTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : getNum(totalWorth)});
 		}
 		//if (dbug) console.log ("Now calculating for day " + current.toString() + ".");
-		//console.log ("Comparing " + current.toISOString().substring(0,10) + " to " + nextBuyDay.toISOString().substring(0,10)  + ".");
+		if (dbug) console.log ("Comparing " + current.toISOString().substring(0,10) + " to " + nextBuyDay.toISOString().substring(0,10)  + ".");
 		if (current.toISOString().substring(0,10) == nextBuyDay.toISOString().substring(0,10)) {
-			//console.log ("It's " + nextBuyDay.toISOString().substring(0,10) + ", so I'm going to save the $ " + cost + ".");
+			if (dbug) console.log ("It's " + nextBuyDay.toISOString().substring(0,10) + ", so I'm going to save the $ " + cost + ".");
+			totalSaved += parseFloat(cost);
 			account += parseFloat(cost);
 			if (account >= etfPrice) {
-				account = account - etfPrice;
-				shares++;
+				let numShares = Math.floor(account / etfPrice);
+				totalETFCost += (etfPrice * numShares);
+				account = account - (etfPrice * numShares);
+				shares = shares + numShares;
+				acb["shares"].push ({"numShares" : numShares, "cost" : etfPrice});
+				portfolio = shares * etfPrice;
+				totalWorth = parseFloat(account) + parseFloat(portfolio);
 			}
-			if (paymentPeriod == "everyday") {
+			if (paymentPeriod == "day") {
 				nextBuyDay.setDate(nextBuyDay.getDate() + parseInt(1));
 			} else if (paymentPeriod == "businessday") {
 				const daysToAdd = (nextBuyDay.getDay() == 5 ? 3 : 1);
@@ -98,7 +158,10 @@ function calculate () {
 				nextBuyDay.setDate(nextBuyDay.getDate() + parseInt(14));
 			} else if (paymentPeriod == "month") {
 				// Ahhh sheeeeeeeet
-				nextBuyDay.setDate(nextBuyDay.addMonths(1));
+				nextBuyDay = nextBuyDay.addMonths(1);
+				if (dbug) console.log ("Set nextBuyDay to " + nextBuyDay.toISOString().substring(0,10) + ".");
+			} else if (paymentPeriod == "year") {
+				nextBuyDay.setFullYear(nextBuyDay.getFullYear() + parseInt(1));
 			}
 
 		}
@@ -108,33 +171,72 @@ function calculate () {
 			etfPrice = etfPrice * growthRate;
 			//if (dbug) console.log ("Now day is " + current.toString() + ".");
 		}
+
+		
+
 		current.setDate(current.getDate() + parseInt(1));
 	}
-	console.log ("Ending with with current: " + current.toISOString().substring(0,10) + ", and nextBuyDay is: " + nextBuyDay.toISOString().substring(0,10) + ", and will keep going until " + future.toISOString().substring(0,10) + ".");
+	let resTFoot = createHTMLElement("tfoot", {"parentNode" : resTable});
+	let resTFootTR = createHTMLElement("tr", {"parentNode" : resTFoot});
+	yearTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : future.getFullYear()});
+	costTD = createHTMLElement("td", {"parentNode" : resTFootTR, "scope" : "col", "textNode" : getNum(cost)});
+	totalSavedTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : getNum(totalSaved)});
+	etfPriceTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : getNum(etfPrice)});
+	accountTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : getNum(account)});
+	sharesTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : shares});
+	portfolioTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : getNum(portfolio)});
+	totalTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : getNum(totalWorth)});
+
+
 
 	if (dbug) {
+		console.log ("Ending with with current: " + current.toISOString().substring(0,10) + ", and nextBuyDay is: " + nextBuyDay.toISOString().substring(0,10) + ", and will keep going until " + future.toISOString().substring(0,10) + ".");
 		console.log ("ETF Price is now: " + etfPrice + ", and the cost is now $" + cost + ".");
 		console.log ("And you have " + shares + " shares, which is now worth $" + (shares * etfPrice) + ".");
 		console.log ("And your account is worth $"  + account + ".");
 		console.log ("For a total amount of $" + (parseFloat(account) + (shares * etfPrice)) + ".");
 	}
-	/*
-	let payment = fcs["paymentAmnt"].value;
-	let c = fcs["inflationRate"].value /(paymentPeriod * 100);
-	let d = (c+1);
-	let n = fcs["amort"].value * paymentPeriod;
-	fcs["amortOutput"].textContent = fcs["amort"].value;
-	if (dbug) {
-		console.log ("Calculating payment of $" + payment + " at inflation rate of " + c + "% for " + n + " " + paymentPeriod + ".");
-		console.log ("d: " + d + ".");
-		console.log ("d^n: " + d**n + ".");
+	acb["acb"] = (shares == 0 ? null : totalETFCost / shares);
+
+	worksheet["acb"] = acb;
+	worksheet["etfPrice"] = etfPrice;
+	worksheet["cost"] = cost;
+	worksheet["shares"] = shares;
+	worksheet["account"] = account;
+
+	const otherInfoH3 = createHTMLElement("h3", {"parentNode" : fcs["resultsHolder"], "textNode" : "Other Info"});
+	const otherDL = createHTMLElement("dl", {"parentNode" : fcs["resultsHolder"]});
+	const totalCostDT = createHTMLElement("dt", {"parentNode" : otherDL, "textNode" : "Total Cost of lattés"});
+	const totalCostDD = createHTMLElement("dd", {"parentNode" : otherDL, "textNode" : getNum(totalSaved)});
+	const oppCostDT = createHTMLElement("dt", {"parentNode" : otherDL, "textNode" : "Opportunity Cost of lattés"});
+	const oppCostDD = createHTMLElement("dd", {"parentNode" : otherDL, "textNode" : getNum(totalWorth)});
+	if (shares > 0) {
+		const acbDT = createHTMLElement("dt", {"parentNode" : otherDL, "textNode" : "ACB (Average Cost Basis) of ETFs"});
+		const acbDD = createHTMLElement("dd", {"parentNode" : otherDL, "textNode" : getNum(acb["acb"])});
+		const capitalGainDT = createHTMLElement("dt", {"parentNode" : otherDL, "textNode" : "Capital Gain"});
+		const capitalGainDD = createHTMLElement("dd", {"parentNode" : otherDL, "textNode" : getNum((etfPrice * shares) - (acb["acb"] * shares))});
+		const taxableDT = createHTMLElement("dt", {"parentNode" : otherDL, "textNode" : "Taxable Capital Gain"});
+		const taxableDD = createHTMLElement("dd", {"parentNode" : otherDL, "textNode" : getNum(((etfPrice * shares) - (acb["acb"] * shares))/2)});
 	}
-	let L = (payment *(((1+c)**n)-1))/(c*(1+c)**n);
-	fcs["resultsOutput"].innerHTML = L.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-	if (dbug) console.log ("Calculated $" + L);
-	*/
+	
+	const retirementIncomeH3 = createHTMLElement("h3", {"parentNode": fcs["resultsHolder"], "textNode" : "Annual Increae To Retirement Income"});
+	const retirementIncomeP1 = createHTMLElement("p", {"parentNode" : fcs["resultsHolder"], "textNode" : "In FIRE (Financially Independent Retire Early) circles, the 4% rule says that you can withdraw 4% of your income annually for 30 years before you risk running out of money. This works in most cases, but not all.  Some use the 3.5% rule for even more cases.  3% is pretty much all cases, and will be good for longer than 30 years."});
+	const retirementIncomeP2 = createHTMLElement("p", {"parentNode" : fcs["resultsHolder"], "textNode" : "The following shows how the above results could add to your annual retirement income.  It's up to you to decide if it's worth the latté."});
+	const retirementIncomeDL = createHTMLElement("dl", {"parentNode" : fcs["resultsHolder"]});
+	const fourRuleDT = createHTMLElement("dt", {"parentNode" : retirementIncomeDL, "textNode" : "The 4% Rule"});
+	const fourRuleDD = createHTMLElement("dd", {"parentNode" : retirementIncomeDL, "textNode" : getNum(totalWorth * 0.04)});
+	const threeFiveRuleDT = createHTMLElement("dt", {"parentNode" : retirementIncomeDL, "textNode" : "The 3.5% Rule"});
+	const threeFiveRuleDD = createHTMLElement("dd", {"parentNode" : retirementIncomeDL, "textNode" : getNum(totalWorth * 0.035)});
+	const threeRuleDT = createHTMLElement("dt", {"parentNode" : retirementIncomeDL, "textNode" : "The 3.5% Rule"});
+	const threeRuleDD = createHTMLElement("dd", {"parentNode" : retirementIncomeDL, "textNode" : getNum(totalWorth * 0.03)});
+
+
+	resultsH2.focus();
 
 } // End of calculate
+
+function displayResults() {
+} // End of displayResults
 
 function getPayPeriod () {
 	const payBtns = document.querySelectorAll("input[type=radio][name=payrate]");
@@ -174,9 +276,116 @@ Date.prototype.getDaysInMonth = function () {
 };
 
 Date.prototype.addMonths = function (value) {
-    var n = this.getDate();
-    this.setDate(1);
+	let n = this.getDate();
+	if (dbug) console.log ("n: " + n + ".");
+	this.setDate(1);
     this.setMonth(this.getMonth() + value);
     this.setDate(Math.min(n, this.getDaysInMonth()));
+	if (dbug) console.log ("set date to " + this.getDate() + " and month to " + this.getMonth() + ".");
     return this;
 };
+
+
+function createHTMLElement (type, attribs) {
+	let newEl = document.createElement(type);
+	let fdbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false || dbug == true ? true : false);
+	for (let k in attribs) {
+		if (dbug) console.log("Dealing with attrib " + k + ".");
+		if (k == "parentNode") {
+			if (dbug) console.log("Dealing with parentnode.");
+			let parentNode = getHTMLElement(attribs[k], dbug);
+
+			try {
+				if (attribs.hasOwnProperty("insertBefore")) {
+					var beforeEl = getHTMLElement(attribs["insertBefore"], dbug);
+					parentNode.insertBefore(newEl, beforeEl);
+				} else if (attribs.hasOwnProperty("insertAfter")) {
+					var afterEl = getHTMLElement(attribs["insertAfter"], dbug);
+					parentNode.insertBefore(newEl, afterEl.nextSibling);
+				} else {
+					parentNode.appendChild(newEl);
+				}
+			}
+			catch (er) {
+				console.error("Error appending newEl to parentNode: " + er.message + ".");
+			}
+		} else if (k == "textNode" || k == "nodeText") {
+			if (dbug) console.log("Dealing with textnode " + attribs[k] + ".");
+			if (typeof (attribs[k]) == "string") {
+				if (dbug) console.log("As string...");
+				newEl.appendChild(document.createTextNode(attribs[k]));
+			} else if (attribs[k] instanceof HTMLElement) {
+				if (dbug) console.log("As HTML element...");
+				newEl.appendChild(attribs[k]);
+			} else {
+				if (dbug) console.log("As something else...");
+				newEl.appendChild(document.createTextNode(attribs[k].toString()));
+			}
+		} else if (k == "innerHTML") {
+			if (dbug) console.log ("Dealing with innerHTML " + attribs[k] + ".");
+			newEl.innerHTML = attribs[k];
+		} else if (k.match(/^insert(Before|After)$/)) {
+				// Do nothing.
+		} else if (k == "textContent") {
+			newEl.textContent = attribs[k];
+		} else {
+			newEl.setAttribute(k, attribs[k]);
+		}
+	}
+	return newEl;
+} // End of createHTMLElement
+
+function getHTMLElement (el) {
+	let rv = null;
+	let fdbug = (((arguments.length == 2 && arguments[1] != null && arguments[1] != undefined && arguments[1] !== false) || dbug == true) ? true : false); 
+	//var iwin = window;
+	if (el instanceof HTMLElement) { // || el instanceof iwin.HTMLElement) {
+		rv = el;
+	} else if (el instanceof String || typeof(el) === "string") {
+		try {
+			if (fdbug) console.log ("Trying to getHTMLElement " + el + ".");
+			rv = document.getElementById(el);
+		} catch (er) {
+			console.error("Error getting HTML Element #" + el + ".  Apparently that's not on this page.");
+		}
+	}
+	return rv;
+} // End of getHTMLElement
+
+
+function removeChildren (el) {
+	var dbug = (arguments.length == 2 && arguments[1] != null && arguments[1] != false ? true : false);
+	while (el.firstChild) {	
+		el.removeChild(el.firstChild);
+	}
+} // End of removeChildren
+
+
+var formatter = new Intl.NumberFormat("en-CA", {
+  style: 'currency',
+  currency: 'CAD',
+
+  // These options are needed to round to whole numbers if that's what you want.
+  //minimumFractionDigits: 0, // (this suffices for whole numbers, but will print 2500.10 as $2,500.1)
+  //maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
+  // Taken from https://stackoverflow.com/questions/149055/how-to-format-numbers-as-currency-string
+});
+
+
+function getNum (num) {
+	let showPrecise = !true;
+	let calcRounded = false;
+	if (showPrecise) {
+		if (calcRounded) {
+			return formatter.format(num);
+		} else {
+			return num;
+		}
+	} else {
+	
+		return formatter.format(num);
+	}
+} // End of getNum
+
+
+
