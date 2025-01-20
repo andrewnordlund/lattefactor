@@ -1,6 +1,6 @@
 var dbug = !true;
-let version = "1.1.0";
-let lastUpdated = "2025-01-19";
+let version = "1.1.1";
+let lastUpdated = "2025-01-20";
 let showPrecise = false;
 let calcRounded = true;
 var fcs = {
@@ -37,7 +37,7 @@ function init () {
 				fcs[control].value = tomorrow.toISOString().substring(0,10);
 				//fcs[control].addEventListener("change", calculate, false);
 			} else if (control == "endDate") {
-				const lastday = new Date(tomorrow.getFullYear()+5, tomorrow.getMonth(), tomorrow.getDate());
+				const lastday = new Date(tomorrow.getFullYear()+35, tomorrow.getMonth(), tomorrow.getDate());
 				
 				if (dbug) console.log ("Today is " + today + ".");
 				fcs[control].value = lastday.toISOString().substring(0,10);;
