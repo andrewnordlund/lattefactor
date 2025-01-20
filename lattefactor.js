@@ -1,5 +1,8 @@
 var dbug = !true;
-let version = "1.0.0";
+let version = "1.1.0";
+let lastUpdated = "2025-01-19";
+let showPrecise = false;
+let calcRounded = true;
 var fcs = {
 	"paymentAmnt" : null,
 	"inflationRate" : null,
@@ -15,9 +18,11 @@ var fcs = {
 	"year" : null,
 	"etfPrice" : null,
 	"growthRate" : null,
-	"resultsHolder" : null
+	"resultsHolder" : null,
+	"version" : null,
+	"lastUpdated" : null
 }
-const worksheet = {};	// I'm a COBOL programmer by day.  :p
+let worksheet = {};	// I'm a COBOL programmer by day.  :p
 const today = new Date(); //.toISOString().substring(0,10);
 const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1);
 function init () {
@@ -37,9 +42,13 @@ function init () {
 				if (dbug) console.log ("Today is " + today + ".");
 				fcs[control].value = lastday.toISOString().substring(0,10);;
 			} else if (control == "calcBtn") {
-				fcs[control].addEventListener("click", calculate, false);
+				fcs[control].addEventListener("click", gatherData, false);
 			} else if (false && dbug && (control == "month" || control == "fortnight")) {
 				console.log (control + ": " + fcs[control].checked +".");
+			} else if (control == "version") {
+				fcs[control].textContent = version;
+			} else if (control == "lastUpdated") {
+				fcs[control].textContent = lastUpdated;
 			}
 		}
 	}
@@ -47,11 +56,33 @@ function init () {
 		console.error ("Caught exception: " + ex.message);
 	}
 	if (dbug) console.log ("inited.");
+	handleHash ();
+
 } // End of init
 
-function calculate () {
+function gatherData () {
 	removeChildren(fcs["resultsHolder"]);
+	worksheet  = {};
 
+	worksheet["cost"] = fcs["paymentAmnt"].value;
+	worksheet["paymentPeriod"] = getPayPeriod(); //(fcs["month"].checked ? 12 : 26);
+	let paymentPeriod = worksheet["paymentPeriod"];
+	worksheet["inflationRate"] = fcs["inflationRate"].value;
+	worksheet["startDate"] = fcs["startDate"].value;
+	worksheet["endDate"] = fcs["endDate"].value;
+	worksheet["etfPrice"] = fcs["etfPrice"].value;
+	worksheet["growthRate"] = fcs["growthRate"].value; //getDailyGrowthRate(); 
+
+
+	if (dbug) console.log ("Calculating....");
+	if (dbug) console.log ("Got payrate: " + paymentPeriod + ".");
+
+
+	setURL();
+	calculate();
+} // End of gatherData
+
+function calculate () {
 	const resultsH2 = createHTMLElement("h2", {"parentNode" : fcs["resultsHolder"], "tabindex" : "-1", "textNode" : "Results", "id" : "resultsH2"});
 
 	// Gather Data
@@ -64,7 +95,7 @@ function calculate () {
 
 
 	if (dbug) console.log ("Calculating....");
-	let paymentPeriod = getPayPeriod(); //(fcs["month"].checked ? 12 : 26);
+	let paymentPeriod = worksheet["paymentPeriod"]; //(fcs["month"].checked ? 12 : 26);
 	if (dbug) console.log ("Got payrate: " + paymentPeriod + ".");
 
 	let account = 0;
@@ -176,6 +207,8 @@ function calculate () {
 
 		current.setDate(current.getDate() + parseInt(1));
 	}
+	portfolio = shares * etfPrice;
+	totalWorth = parseFloat(account) + parseFloat(portfolio);
 	let resTFoot = createHTMLElement("tfoot", {"parentNode" : resTable});
 	let resTFootTR = createHTMLElement("tr", {"parentNode" : resTFoot});
 	yearTD = createHTMLElement("td", {"parentNode" : resTFootTR, "textNode" : future.getFullYear()});
@@ -235,8 +268,135 @@ function calculate () {
 
 } // End of calculate
 
-function displayResults() {
-} // End of displayResults
+// Check the document location for saved things
+function handleHash () {
+	let hasHash = false;
+	let thisURL = new URL(document.location);
+	let params = thisURL.searchParams;
+
+	//let hash = thisURL.hash;
+	let toCalculate = 0;
+	if (params.has("dbug")) {
+		if (params.get("dbug") == "true") dbug= true;
+	}
+
+	if (params.has("cost")) {
+		let cost = params.get("cost").replace(/[^\d\.]/g, "");
+		fcs["paymentAmnt"].value = cost;
+		worksheet["cost"] = cost;
+		toCalculate = toCalculate + 1;
+		hasHash = true;
+	}
+	if (params.has("paymentPeriod")) {
+		let pp = params.get("paymentPeriod");
+		if (fcs.hasOwnProperty(pp)) {
+			fcs[pp].checked = true;
+			worksheet["paymentPeriod"];
+			toCalculate = toCalculate | 2;
+		}
+		hasHash = true;
+	}
+	if (params.has("inflationRate")) {
+		let inflationRate = params.get("inflationRate").replace(/[^\d\.]/g, "");
+		fcs["inflationRate"].value = inflationRate;
+		toCalculate = toCalculate | 4;
+		hasHash = true;
+	}
+
+	if (params.has("startDate")) {
+		let sd = params.get("startDate");
+		if (sd.match(/\d\d\d\d-\d\d-\d\d/)) {
+			fcs["startDate"].value = sd;
+			toCalculate = toCalculate | 8;
+		}
+		hasHash = true;
+	}
+	if (params.has("endDate")) {
+		let sd = params.get("endDate");
+		if (sd.match(/\d\d\d\d-\d\d-\d\d/)) {
+			fcs["endDate"].value = sd;
+			toCalculate = toCalculate | 16;
+		}
+		hasHash = true;
+	}
+	if (params.has("etfPrice")) {
+		let etfPrice = params.get("etfPrice").replace(/[^\d\.]/g, "");
+		fcs["etfPrice"].value = etfPrice;
+		worksheet["etfPrice"] = etfPrice;
+		toCalculate = toCalculate + 32;
+		hasHash = true;
+	}
+	if (params.has("growthRate")) {
+		let growthRate = params.get("growthRate").replace(/[^\d\.]/g, "");
+		fcs["growthRate"].value = growthRate;
+		toCalculate = toCalculate | 4;
+		hasHash = true;
+	}
+
+
+	if (dbug) console.log ("toCalculate: " + toCalculate + ": " + toCalculate.toString(2) + ".");
+	if (hasHash) {
+		//calcBtn.focus();
+		let clickEv = new Event("click");
+		fcs["calcBtn"].dispatchEvent(clickEv);
+
+	}
+	return hasHash;
+
+
+} // End of handleHash
+
+// set the URL
+function setURL () {
+	//console.log ("Setting hash.");
+	let url = new URL(document.location);
+	let newURL = url.toString().replace(/#.*$/, "");
+	newURL = newURL.replace(/\?.*$/, "");
+	//let params = [];
+	/*for (let id in filters) {
+		if (!filters[id].checked) {
+			params.push(id.replace("Chk", ""));
+			if (id.match(/levelA/)) {
+				params[params.length-1] += "$";
+			}
+		}
+	}*/
+	/*
+	if (levelSel) saveValues["lvl"] = levelSel.selectedIndex);
+	if (startDateTxt.value) ("strtdt=" +  startDateTxt.value);
+	if (stepSelect) params.push("stp=" +  stepSelect.selectedIndex);
+	if (endDateTxt.value) params.push("enddt=" +  endDateTxt.value);
+
+	newURL += "?" + params.join("&");
+	*/
+	newURL += "?";
+	/*saveValues.forEach(function (val, key, saveValues) {
+		console.log ("adding " + key + "=" + val);
+		newURL += key + "=" + val + "&";
+		});
+	newURL = newURL.substring(0, newURL.length - 1);
+	*/
+	let saveValues = [];
+	for (let k in worksheet) {
+		if (k != "acb") saveValues.push(k + "=" + worksheet[k]);
+	}
+
+	if (dbug) saveValues.push("dbug=true");
+	if (showPrecise) saveValues.push("showPrecise=true");
+	if (calcRounded) saveValues.push("calcRounded=true");
+	newURL += saveValues.join("&");
+	/*
+	if (params.length > 0) {
+		newURL += "?filters=" + params.join(sep) + (selectedTab != "" ? "&" + selectedTab : "") + url.hash;
+	} else {
+		newURL += (selectedTab != "" ? "?" + selectedTab : "") + url.hash;
+	}
+	*/
+	history.pushState({}, document.title, newURL);
+	
+
+} // End of setURL
+
 
 function getPayPeriod () {
 	const payBtns = document.querySelectorAll("input[type=radio][name=payrate]");
@@ -288,11 +448,11 @@ Date.prototype.addMonths = function (value) {
 
 function createHTMLElement (type, attribs) {
 	let newEl = document.createElement(type);
-	let fdbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false || dbug == true ? true : false);
+	let fdbug = false; //(arguments.length == 3 &&arguments[2] != null && arguments[2] != false || dbug == true ? true : false);
 	for (let k in attribs) {
-		if (dbug) console.log("Dealing with attrib " + k + ".");
+		if (fdbug) console.log("Dealing with attrib " + k + ".");
 		if (k == "parentNode") {
-			if (dbug) console.log("Dealing with parentnode.");
+			if (fdbug) console.log("Dealing with parentnode.");
 			let parentNode = getHTMLElement(attribs[k], dbug);
 
 			try {
@@ -310,19 +470,19 @@ function createHTMLElement (type, attribs) {
 				console.error("Error appending newEl to parentNode: " + er.message + ".");
 			}
 		} else if (k == "textNode" || k == "nodeText") {
-			if (dbug) console.log("Dealing with textnode " + attribs[k] + ".");
+			if (fdbug) console.log("Dealing with textnode " + attribs[k] + ".");
 			if (typeof (attribs[k]) == "string") {
-				if (dbug) console.log("As string...");
+				if (fdbug) console.log("As string...");
 				newEl.appendChild(document.createTextNode(attribs[k]));
 			} else if (attribs[k] instanceof HTMLElement) {
-				if (dbug) console.log("As HTML element...");
+				if (fdbug) console.log("As HTML element...");
 				newEl.appendChild(attribs[k]);
 			} else {
-				if (dbug) console.log("As something else...");
+				if (fdbug) console.log("As something else...");
 				newEl.appendChild(document.createTextNode(attribs[k].toString()));
 			}
 		} else if (k == "innerHTML") {
-			if (dbug) console.log ("Dealing with innerHTML " + attribs[k] + ".");
+			if (fdbug) console.log ("Dealing with innerHTML " + attribs[k] + ".");
 			newEl.innerHTML = attribs[k];
 		} else if (k.match(/^insert(Before|After)$/)) {
 				// Do nothing.
@@ -373,8 +533,6 @@ var formatter = new Intl.NumberFormat("en-CA", {
 
 
 function getNum (num) {
-	let showPrecise = !true;
-	let calcRounded = false;
 	if (showPrecise) {
 		if (calcRounded) {
 			return formatter.format(num);
