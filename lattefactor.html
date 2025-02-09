@@ -14,7 +14,7 @@
 			<div id="warningHolder">
 				<p><strong>WARNING:</strong> This is a proof-of-concept calculator to determine how much that expense is really costing you.</p>
 				<p>There's debate in the personal finance arena over whether that daily latté is holding you back financially or not.  One side says "Take care of the dimes, and the dollars will take care of themselves."  The other side says "If you give up that daily latté for 10 years, you still won't save enough for a down payment on a house.  So, if that latté is what helps you get through the day, then enjoy it.  Where you should concentrate your efforts is on the major expenses of housing and transportation."</p>
-				<p>There are a number of calculators out there to do this. Most of the ones I've seen assume you'll put the money in an interest-bearning savings account.  This calculator assumes you'll purchase a growth ETF (no dividends) instead. This calculator assumes the following:</p>
+				<p>There are a number of calculators out there to do this. Most of the ones I've seen assume you'll put the money in an interest-bearning savings account.  This calculator assumes you'll purchase a growth <a href="https://www.investopedia.com/terms/e/etf.asp" rel="noopener noreferrer" target="_blank">ETF</a> (no dividends) instead. This calculator assumes the following:</p>
 				<ul>
 					<li>You'll purchase a growth ETF (or mutual fund) that does not pay dividends.</li>
 					<li>The ETF will be purchased in your native currency, so exchange rates are irrelevant.</li>
@@ -29,7 +29,7 @@
 				<h2>Details</h2>
 				<div class="fieldHolder">
 					<label for="paymentAmnt">Cost </label>
-					<span id="dollars">$</span> <input id="paymentAmnt" name="paymentAmnt" aria-describedby="dollars">
+					<span id="dollars">$</span> <input id="paymentAmnt" name="paymentAmnt" aria-describedby="dollars" inputmode="numeric" pattern="\d+(\.\d\d?)?">
 				</div>
 				<div class="fieldHolder">
 					<fieldset>

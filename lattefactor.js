@@ -1,6 +1,6 @@
 var dbug = !true;
-let version = "1.1.1";
-let lastUpdated = "2025-01-20";
+let version = "1.2.0";
+let lastUpdated = "2025-02-09";
 let showPrecise = false;
 let calcRounded = true;
 var fcs = {
@@ -42,7 +42,7 @@ function init () {
 				if (dbug) console.log ("Today is " + today + ".");
 				fcs[control].value = lastday.toISOString().substring(0,10);;
 			} else if (control == "calcBtn") {
-				fcs[control].addEventListener("click", gatherData, false);
+				fcs[control].addEventListener("click", startProcess, false);
 			} else if (false && dbug && (control == "month" || control == "fortnight")) {
 				console.log (control + ": " + fcs[control].checked +".");
 			} else if (control == "version") {
@@ -60,17 +60,104 @@ function init () {
 
 } // End of init
 
-function gatherData () {
+function startProcess () {
 	removeChildren(fcs["resultsHolder"]);
 	worksheet  = {};
 
-	worksheet["cost"] = fcs["paymentAmnt"].value;
+
+	// Remove any existing error messages
+	let errorDivs = document.querySelectorAll(".error");
+	if (dbug && errorDivs.length > 0) console.log ("Found " + errorDivs.length + " errorDivs.");
+	for (var i = 0; i < errorDivs.length; i++) {
+		if (errorDivs[i].hasAttribute("id")) {
+			var id = errorDivs[i].getAttribute("id");
+			var referrers = document.querySelectorAll("[aria-describedby="+id+"]");
+			for (var j = 0; j<referrers.length; j++) {
+				if (referrers[j].getAttribute("aria-describedby") == id) {
+					referrers[j].removeAttribute("aria-describedby");
+				} else {
+					referrers[j].setAttribute("aria-describedby", referrers[j].getAttribute("aria-describedby").replace(id, "").replace(/\s+/, " "));
+				}
+			}
+		}
+		errorDivs[i].parentNode.removeChild(errorDivs[i]);
+	}
+
+	// Remove any existing warning messages
+	let warningDivs = document.querySelectorAll(".warning");
+	if (dbug && warningDivs.length > 0) console.log ("Found " + warningDivs.length + " warningDivs.");
+	for (var i = 0; i < warningDivs.length; i++) {
+		if (warningDivs[i].hasAttribute("id")) {
+			var id = warningDivs[i].getAttribute("id");
+			var referrers = document.querySelectorAll("[aria-describedby="+id+"]");
+			for (var j = 0; j<referrers.length; j++) {
+				if (referrers[j].getAttribute("aria-describedby") == id) {
+					referrers[j].removeAttribute("aria-describedby");
+				} else {
+					referrers[j].setAttribute("aria-describedby", referrers[j].getAttribute("aria-describedby").replace(id, "").replace(/\s+/, " "));
+				}
+			}
+		}
+		warningDivs[i].parentNode.removeChild(warningDivs[i]);
+	}
+
+
+	gatherData();
+
+	errorDivs = document.querySelectorAll(".error");
+
+	if (errorDivs.length == 0 ) {
+		if (dbug) console.log ("There are no errors, so setting hash, and calculating.");
+		setURL();
+		calculate();
+	} else {
+		if (dbug) console.log ("There's at least one error, so not calculating.");
+		let firstErrorMessageID = errorDivs[0].id;
+		//console.log ("First error Message ID: " + firstErrorMessageID + ".");
+		let selector = "*[aria-describedby~=" + firstErrorMessageID + "]";
+		//console.log ("Using selector "+ selector + ".");
+		let firstErrInput = document.querySelector(selector);
+		//console.log ("Got first error input: "  + firstErrInput.id + ".");
+		if (firstErrInput) firstErrInput.focus();
+	}
+
+
+} // startProcess
+
+function addErrorMessage (inID, errMsg) {
+	let el, errDiv = null;
+	el = document.getElementById(inID);
+	if (el) {
+		if (dbug) console.log ("addErrorMessage::value of " + inID + " is " + inID.value + ". Adding errorMessage: " + errMsg + ".");
+		errDiv = document.getElementById(inID + "Error");
+
+		if (!errDiv) errDiv = createHTMLElement("div", {"parentNode" : el.parentNode, "id":inID + "Error", "class" : "error"});
+		createHTMLElement("p", {"parentNode" : errDiv, "nodeText" : errMsg});
+		if (el.hasAttribute("aria-describedby")) {
+			el.setAttribute("aria-describedby", el.getAttribute("aria-describedby") + " " + inID + "Error");
+		} else {
+			el.setAttribute("aria-describedby", inID + "Error");
+		}
+	} else {
+		console.error ("addErrorMessage::Couldn't get element " + inID);
+	}
+} // End of addErrorMessage
+
+
+
+function gatherData () {
+
+	worksheet["cost"] = fcs["paymentAmnt"].value.replace("/[^\d\.]/g", "");
+	if (worksheet["cost"] <= 0) addErrorMessage("paymentAmnt", "Cost must be a positive number");
 	worksheet["paymentPeriod"] = getPayPeriod(); //(fcs["month"].checked ? 12 : 26);
+	
 	let paymentPeriod = worksheet["paymentPeriod"];
 	worksheet["inflationRate"] = fcs["inflationRate"].value;
+	
 	worksheet["startDate"] = fcs["startDate"].value;
 	worksheet["endDate"] = fcs["endDate"].value;
 	worksheet["etfPrice"] = fcs["etfPrice"].value;
+	if (worksheet["etfPrice"] == "") addErrorMessage("etfPrice", "ETF Price must be a positive number.");
 	worksheet["growthRate"] = fcs["growthRate"].value; //getDailyGrowthRate(); 
 
 
@@ -78,8 +165,6 @@ function gatherData () {
 	if (dbug) console.log ("Got payrate: " + paymentPeriod + ".");
 
 
-	setURL();
-	calculate();
 } // End of gatherData
 
 function calculate () {
@@ -163,9 +248,9 @@ function calculate () {
 			let totalTD = createHTMLElement("td", {"parentNode" : tr, "textNode" : getNum(totalWorth)});
 		}
 		//if (dbug) console.log ("Now calculating for day " + current.toString() + ".");
-		if (dbug) console.log ("Comparing " + current.toISOString().substring(0,10) + " to " + nextBuyDay.toISOString().substring(0,10)  + ".");
+		//if (dbug) console.log ("Comparing " + current.toISOString().substring(0,10) + " to " + nextBuyDay.toISOString().substring(0,10)  + ".");
 		if (current.toISOString().substring(0,10) == nextBuyDay.toISOString().substring(0,10)) {
-			if (dbug) console.log ("It's " + nextBuyDay.toISOString().substring(0,10) + ", so I'm going to save the $ " + cost + ".");
+			//if (dbug) console.log ("It's " + nextBuyDay.toISOString().substring(0,10) + ", so I'm going to save the $ " + cost + ".");
 			totalSaved += parseFloat(cost);
 			account += parseFloat(cost);
 			if (account >= etfPrice) {
