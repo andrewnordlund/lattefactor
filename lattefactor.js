@@ -1,6 +1,6 @@
-var dbug = !true;
-let version = "1.2.0";
-let lastUpdated = "2025-02-09";
+var dbug = false;
+let version = "1.2.1";
+let lastUpdated = "2025-02-15";
 let showPrecise = false;
 let calcRounded = true;
 var fcs = {
@@ -10,6 +10,7 @@ var fcs = {
 	"endDate" : null,
 	"calcBtn" : null,
 	"resultsOutput" : null,
+	"onetime" : null,
 	"fortnight" : null,
 	"day" : null,
 	"businessday" : null,
@@ -43,8 +44,6 @@ function init () {
 				fcs[control].value = lastday.toISOString().substring(0,10);;
 			} else if (control == "calcBtn") {
 				fcs[control].addEventListener("click", startProcess, false);
-			} else if (false && dbug && (control == "month" || control == "fortnight")) {
-				console.log (control + ": " + fcs[control].checked +".");
 			} else if (control == "version") {
 				fcs[control].textContent = version;
 			} else if (control == "lastUpdated") {
@@ -151,7 +150,6 @@ function gatherData () {
 	if (worksheet["cost"] <= 0) addErrorMessage("paymentAmnt", "Cost must be a positive number");
 	worksheet["paymentPeriod"] = getPayPeriod(); //(fcs["month"].checked ? 12 : 26);
 	
-	let paymentPeriod = worksheet["paymentPeriod"];
 	worksheet["inflationRate"] = fcs["inflationRate"].value;
 	
 	worksheet["startDate"] = fcs["startDate"].value;
@@ -162,7 +160,7 @@ function gatherData () {
 
 
 	if (dbug) console.log ("Calculating....");
-	if (dbug) console.log ("Got payrate: " + paymentPeriod + ".");
+	if (dbug) console.log ("Got payrate: " + worksheet["paymentPeriod"] + ".");
 
 
 } // End of gatherData
@@ -191,7 +189,7 @@ function calculate () {
 
 	let dparts = startDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 	let current = new Date(dparts[1], dparts[2]-1, dparts[3]);
-	let nextBuyDay = new Date(dparts[1], dparts[2]-1, dparts[3]);
+	let nextBuyDay = new Date(dparts[1], dparts[2]-1, dparts[3]);	// Initialize as Start Day
 	let nextInflationDay = new Date(parseInt(dparts[1]) + parseInt(1), dparts[2]-1, dparts[3]);
 
 	let parts = endDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
