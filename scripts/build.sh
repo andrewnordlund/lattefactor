@@ -1,5 +1,6 @@
 set -e
 
+
 echo "You're currently working in:"
 pwd
 
